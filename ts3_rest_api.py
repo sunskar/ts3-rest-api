@@ -9,6 +9,11 @@ def connectToTelnet(host, port, user, password):
     telnet.read_until('\n\r')
     telnet.write('use 1\r\n')
     telnet.read_until('\n\r')
+    telnet.write('whoami\r\n')
+    whoami = parseResponseToDictionary(telnet.read_until('\n\r')[:-2])
+    telnet.read_until('\n\r')
+    telnet.write('clientupdate client_nickname=' + whoami['client_nickname'][:whoami['client_nickname'].index('\\s')] + '\svia\sAPI\r\n')
+    telnet.read_until('\n\r')  
     return telnet
 
 
@@ -40,13 +45,26 @@ def getClientList(telnet):
     clientlist = telnet.read_until('\n\r')[:-2]
     telnet.read_until('\n\r')
     clients = clientlist.split('|')
-    list_of_clients = []
+    list_of_clients = [] 
     for client in clients:
-        clientinfo = {}
-        for token in client.split(' '):
-            info = token.split('=')
-            clientinfo[info[0]] = info[1]
-        list_of_clients.append(clientinfo)
+        list_of_clients.append( parseResponseToDictionary(client) )
     return list_of_clients
 
+def parseResponseToDictionary(response):
+    iteminfo = {}
+    for item in response.split(' '):
+        info = item.split('=')
+        if '=' in str(item): 
+            iteminfo[info[0]] = info[1]
+        else:
+            iteminfo[info[0]] = ''
 
+    return iteminfo
+
+def pokeClient(clid, telnet, message):
+    telnet.write( 'clientpoke clid=' + str(clid) + ' msg=' + str(message) + '\r\n')
+    response = telnet.read_until('\n\r')
+    if response == 'error id=0 msg=ok\n\r':
+        return response
+    else:
+        return response
