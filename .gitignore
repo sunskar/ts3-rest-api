@@ -1,6 +1,7 @@
 # poc
 proof_of_concept.py
 .idea/
+ts3/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
