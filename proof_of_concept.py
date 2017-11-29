@@ -16,6 +16,7 @@ def main():
             continue
         print (str(client['client_nickname']) + ' - ' + str(tra.getChannelByCid(client['cid'], list_of_channels)['channel_name']))
 
+
 if __name__ == "__main__":
     main()
 
