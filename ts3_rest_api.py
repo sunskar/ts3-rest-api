@@ -1,35 +1,29 @@
 import telnetlib
 
-
 def connectToTelnet(host, port, user, password):
     telnet = telnetlib.Telnet(host, port)
-    telnet.read_until('\n\r')
-    telnet.read_until('\n\r')
+    print telnet.read_until('\n\r')
+    print telnet.read_until('\n\r')
     telnet.write('login ' + user + ' ' + password + '\r\n')
-    telnet.read_until('\n\r')
+    print telnet.read_until('\n\r')
     telnet.write('use 1\r\n')
-    telnet.read_until('\n\r')
+    print telnet.read_until('\n\r')
     telnet.write('whoami\r\n')
     whoami = parseResponseToDictionary(telnet.read_until('\n\r')[:-2])
-    telnet.read_until('\n\r')
+    print telnet.read_until('\n\r')
     telnet.write('clientupdate client_nickname=' + whoami['client_nickname'][:whoami['client_nickname'].index('\\s')] + '\svia\sAPI\r\n')
-    telnet.read_until('\n\r')  
+    print telnet.read_until('\n\r')  
     return telnet
 
 
 def getChannelList(telnet):
-
     telnet.write('channellist\r\n')
     channellist = telnet.read_until('\n\r')[:-2]
     telnet.read_until('\n\r')
     channels = channellist.split('|')
     list_of_channels = []
     for channel in channels:
-        channelinfo = {}
-        for token in channel.split(' '):
-            info = token.split('=')
-            channelinfo[info[0]] = info[1]
-        list_of_channels.append(channelinfo)
+        list_of_channels.append( parseResponseToDictionary(channel) )
     return list_of_channels
 
 
@@ -68,3 +62,22 @@ def pokeClient(clid, telnet, message):
         return response
     else:
         return response
+
+def sendCommand(command, params, telnet, expect_response):
+    #works if we're lucky, pls clean up at some point
+    cmd = ''
+    for param in command.split(' '):
+        if str(param)[-1:] == '=':
+            cmd = cmd + ' ' + param + params[param[:-1]]
+    command = command[:command.index(' ')] + cmd
+    print ( str(command) + '\r\n' )
+    telnet.write( str(command) + '\r\n' )
+    if expect_response:
+        response = telnet.read_until('\n\r')
+    error = telnet.read_until('\n\r')
+    if error != 'error id=0 msg=ok\n\r':
+        return error
+    if expect_response:
+        return response
+    else:
+        return error
