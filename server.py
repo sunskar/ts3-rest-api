@@ -1,7 +1,7 @@
 # flask server for handling the requests
 
 from flask import Flask, jsonify
-import ts3_rest_api as api
+import api
 
 HOST = '127.0.0.1'
 PORT = '10011'
@@ -22,7 +22,7 @@ def index():
 def get_channels():
     return jsonify( api.getChannelList(tn) )
 
-@app.route('/api/channels/<int:cid>')
+@app.route('/api/channels/<int:cid>', methods=['GET'])
 def get_channel(cid):
     return jsonify( api.getChannelByCid(cid, api.getChannelList(tn)) )
 
