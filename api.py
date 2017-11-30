@@ -2,29 +2,28 @@ import telnetlib
 
 def connectToTelnet(host, port, user, password):
     telnet = telnetlib.Telnet(host, port)    
-    print telnet.read_until('\n\r')
-    print telnet.read_until('\n\r')
+    telnet.read_until('\n\r')
+    telnet.read_until('\n\r')
     telnet.write('login ' + user + ' ' + password + '\r\n')
-    print getErrorResponse(telnet)
+    getErrorResponse(telnet)
     telnet.write('use 1\r\n')
-    print getErrorResponse(telnet)
+    getErrorResponse(telnet)
     telnet.write('whoami\r\n')
     whoami = parseResponseToDictionary(telnet.read_until('\n\r')[:-2])
-    print getErrorResponse(telnet)
+    getErrorResponse(telnet)
     telnet.write('clientupdate client_nickname=' + whoami['client_nickname'][:whoami['client_nickname'].index('\\s')] + '\svia\sAPI\r\n')
-    print getErrorResponse(telnet)
+    getErrorResponse(telnet)
     return telnet
 
 
 def getChannelList(telnet):
-    telnet.write('channellist\r\n')
-    channellist = telnet.read_until('\n\r')[:-2]
-    print channellist + '\n channellist is aboove \n'
-    telnet.read_until('\n\r')
+    channellist = sendCommand('channellist', {}, telnet, True)
     channels = channellist.split('|')
     list_of_channels = []
     for channel in channels:
-        list_of_channels.append( parseResponseToDictionary(channel) )
+        cid = parseResponseToDictionary(channel)['cid']
+        info = sendCommand('channelinfo', {'cid': cid}, telnet, True)
+        list_of_channels.append(parseResponseToDictionary(info))
     return list_of_channels
 
 
@@ -36,14 +35,21 @@ def getChannelByCid(cid, list_of_channels):
 
 
 def getClientList(telnet):
-    telnet.write('clientlist\r\n')
-    clientlist = telnet.read_until('\n\r')[:-2]
-    telnet.read_until('\n\r')
+    clientlist = sendCommand('clientlist' {}, telnet, True)
     clients = clientlist.split('|')
     list_of_clients = [] 
     for client in clients:
-        list_of_clients.append( parseResponseToDictionary(client) )
+        clid = parseResponseToDictionary(client)
+        info = sendCommand('clientinfo', {'clid': clid}, telnet, True)
+        list_of_clients.append(parseResponseToDictionary(info))
     return list_of_clients
+
+
+def getClientByClid(clid, list_of_clients):
+    for client in list_of_clients:
+        if int(client['clid']) == int(clid):
+            return client
+    return -1
 
 
 def parseResponseToDictionary(response):
@@ -53,19 +59,15 @@ def parseResponseToDictionary(response):
             iteminfo['message_type'] = item
         else:
             info = item.split('=')
-            iteminfo[info[0]] = info[1]
+            iteminfo [info[0]] = info[1]
     return iteminfo
 
 
 def getErrorResponse(telnet):
-    print '-\n-\ngetErrorResponse\n-\n-'
     response = telnet.read_until('\n\r')[:-2]
     if response == '':
         return 'no error found'
-    print response
-    error = parseResponseToDictionary(response)
-    print error
-    return error
+    return parseResponseToDictionary(response)
 
 
 def pokeClient(clid, telnet, message):
@@ -80,7 +82,7 @@ def sendCommand(command, params, telnet, expect_response):
     if expect_response:
         response = telnet.read_until('\n\r')
     error = getErrorResponse(telnet)
-    if error != 'error id=0 msg=ok\n\r':
+    if error['msg'] != 'ok':
         return error
     if expect_response:
         return response
