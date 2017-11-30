@@ -13,16 +13,17 @@ tn = api.connectToTelnet(HOST, PORT, USER, PASS)
 app = Flask(__name__)
 
 
-@app.route('/api/')
+@app.route('/')
 def index():
-    return "hello"
+    return "useful help text"
 
 
-@app.route('/api/channels/', methods=['GET'])
+@app.route('/channels/', methods=['GET'])
 def get_channels():
     return jsonify( api.getChannelList(tn) )
 
-@app.route('/api/channels/<int:cid>', methods=['GET'])
+
+@app.route('/channels/<int:cid>', methods=['GET'])
 def get_channel(cid):
     return jsonify( api.getChannelByCid(cid, api.getChannelList(tn)) )
 
