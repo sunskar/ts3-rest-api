@@ -35,7 +35,7 @@ def getChannelByCid(cid, list_of_channels):
 
 
 def getClientList(telnet):
-    clientlist = sendCommand('clientlist' {}, telnet, True)
+    clientlist = sendCommand('clientlist', {}, telnet, True)
     clients = clientlist.split('|')
     list_of_clients = [] 
     for client in clients:
