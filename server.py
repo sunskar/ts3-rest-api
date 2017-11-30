@@ -18,13 +18,13 @@ def index():
     return "useful help text"
 
 
-@app.route('/channels/', methods=['GET'])
-def get_channels():
+@app.route('/<int:vserver>/channels/', methods=['GET'])
+def get_channels(vserver):
     return jsonify( api.getChannelList(tn) )
 
 
-@app.route('/channels/<int:cid>', methods=['GET'])
-def get_channel(cid):
+@app.route('/<int:vserver>/channels/<int:cid>', methods=['GET'])
+def get_channel(vserver ,cid):
     return jsonify( api.getChannelByCid(cid, api.getChannelList(tn)) )
 
 
