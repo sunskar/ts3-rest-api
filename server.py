@@ -42,7 +42,7 @@ class get_channel(Resource): # /<int:vserver>/channel/<int:cid>
 
 @auth.verify_password
 def verify(username, password):
-    return username == password
+    return True
 
 
 restapi.add_resource(root, "/")
