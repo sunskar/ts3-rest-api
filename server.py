@@ -14,41 +14,100 @@ auth = HTTPBasicAuth()
 
 
 class root(Resource): # /
-    def get(self):
-        return "useful help text"
-
-
-class execute_command(Resource): # /<str:command>?param=""
     @auth.login_required
-    def get(self, command):
+    def get(self):
+        return jsonify("username: " + auth.username())
+
+
+class execute_command(Resource): # /<int:vserver>/command/<str:command>?key=value&key2=value2
+    @auth.login_required
+    def get(self, vserver, command):
         username = request.authorization.username
         password = request.authorization.password
-        tn = api.connectToTelnet(HOST, PORT, username, password)
-        param = request.args.get("param")
-        return jsonify(api.sendCommand(command, param, tn, True))
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, '')
+        response = {'response': api.sendCommand(command, request.args, tn, True)}
+        return jsonify(response)
 
 
 class get_channel_list(Resource): # /<int:vserver>/channel/
     @auth.login_required
     def get(self, vserver):
-        return jsonify("return channellist from virtualsever"+str(vserver))
+        username = request.authorization.username
+        password = request.authorization.password
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, '')
+        channellist = api.getChannelList(tn)
+        content = {'total': len(channellist), 'items': channellist}
+        return jsonify(content)
 
 
 class get_channel(Resource): # /<int:vserver>/channel/<int:cid>
     @auth.login_required
     def get(self, cid, vserver):
-        return jsonify("return channelinfo on channel with"+str(cid)+"at virtualserver"+str(vserver))
+        username = request.authorization.username
+        password = request.authorization.password
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, '')
+        
+        return jsonify(api.getChannelByCid(cid, api.getChannelList(tn)))
+
+class get_client_list(Resource): # /<int:vserver>/client/
+    @auth.login_required
+    def get(self, vserver):
+        username = request.authorization.username
+        password = request.authorization.password
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, '')
+        clientlist = api.getClientList(tn)
+        content = {'total': len(clientlist), 'items': clientlist}
+        return jsonify(content)
+
+
+class get_client(Resource): # /<int:vserver>/client/<int:cid>
+    @auth.login_required
+    def get(self, clid, vserver):
+        username = request.authorization.username
+        password = request.authorization.password
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, '')
+        return jsonify(api.getClientByClid(clid, api.getClientList(tn)))
+
+class poke_client(Resource): # /<int:vserver>/poke/<int:cild>?msg=hey\swake\sup!&nickname=Nickname
+    @auth.login_required
+    def get(self, clid, vserver):
+        username = request.authorization.username
+        password = request.authorization.password
+        message = ''
+        nickname = ''
+        if hasattr(request, 'args'):
+            if 'msg' in request.args:
+                message = request.args['msg']
+            if 'nickname' in request.args:
+                nickname = request.args['nickname']
+        tn = api.connectToTelnet(HOST, PORT, vserver, username, password, nickname)
+        return jsonify(api.pokeClient(clid, tn, message))
+
+
+#class message_server(Resource): # /<int:vserver>/message/<int:vserver>?msg=hey\swake\sup!&nickname=Nickname
+    
+#class message_channel(Resource): # /<int:vserver>/channel/message/<int:cid>?msg=hey\swake\sup!&nickname=Nickname
+    
+#class message_client(Resource): # /<int:vserver>/client/message/<int:cild>?msg=hey\swake\sup!&nickname=Nickname
+    
 
 
 @auth.verify_password
 def verify(username, password):
-    return True
+    return api.checkCredentials(HOST, PORT, username, password)['msg'] == 'ok'
 
 
 restapi.add_resource(root, "/")
-restapi.add_resource(execute_command, "/<string:command>")
+restapi.add_resource(execute_command, "/<int:vserver>/command/<string:command>")
 restapi.add_resource(get_channel_list, "/<int:vserver>/channel")
 restapi.add_resource(get_channel, "/<int:vserver>/channel/<int:cid>")
+restapi.add_resource(get_client_list, "/<int:vserver>/client")
+restapi.add_resource(get_client, "/<int:vserver>/client/<int:clid>")
+restapi.add_resource(poke_client, "/<int:vserver>/poke/<int:clid>")
+#restapi.add_resource(message_server, "/<int:vserver>/message/<int:vserver>"
+#restapi.add_resource(message_channel, "/<int:vserver>/message/<int:vserver>"
+#restapi.add_resource(message_client, "/<int:vserver>/message/<int:vserver>"
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,20 +1,32 @@
 import telnetlib
 
-def connectToTelnet(host, port, user, password):
+def connectToTelnet(host, port, vserver, user, password, nickname):
+    telnet = telnetlib.Telnet(host, port)    
+    telnet.read_until('\n\r')
+    telnet.read_until('\n\r')
+    
+    error = sendCommand('login ' + user + ' ' + password, {}, telnet, False)
+    if error['msg'] != 'ok':
+        return error
+    
+    error = sendCommand('use ' + str(vserver), {}, telnet, False)
+    if error['msg'] != 'ok':
+        return error
+    
+    whoami = sendCommand('whoami', {}, telnet, True)
+    whoami = parseResponseToDictionary(whoami)
+    if nickname == '':
+        nickname = whoami['client_nickname'][:whoami['client_nickname'].index('\\s')] + '\svia\sAPI'
+    sendCommand('clientupdate', {'client_nickname': str(nickname)}, telnet, False)
+    return telnet
+    
+
+def checkCredentials(host, port, user, password):
     telnet = telnetlib.Telnet(host, port)    
     telnet.read_until('\n\r')
     telnet.read_until('\n\r')
     telnet.write('login ' + user + ' ' + password + '\r\n')
-    getErrorResponse(telnet)
-    telnet.write('use 1\r\n')
-    getErrorResponse(telnet)
-    telnet.write('whoami\r\n')
-    whoami = parseResponseToDictionary(telnet.read_until('\n\r')[:-2])
-    getErrorResponse(telnet)
-    telnet.write('clientupdate client_nickname=' + whoami['client_nickname'][:whoami['client_nickname'].index('\\s')] + '\svia\sAPI\r\n')
-    getErrorResponse(telnet)
-    return telnet
-
+    return getErrorResponse(telnet)
 
 def getChannelList(telnet):
     channellist = sendCommand('channellist', {}, telnet, True)
@@ -23,7 +35,9 @@ def getChannelList(telnet):
     for channel in channels:
         cid = parseResponseToDictionary(channel)['cid']
         info = sendCommand('channelinfo', {'cid': cid}, telnet, True)
-        list_of_channels.append(parseResponseToDictionary(info))
+        info = parseResponseToDictionary(info)
+        info['cid'] = cid
+        list_of_channels.append(info)
     return list_of_channels
 
 
@@ -39,9 +53,11 @@ def getClientList(telnet):
     clients = clientlist.split('|')
     list_of_clients = [] 
     for client in clients:
-        clid = parseResponseToDictionary(client)
+        clid = parseResponseToDictionary(client)['clid']
         info = sendCommand('clientinfo', {'clid': clid}, telnet, True)
-        list_of_clients.append(parseResponseToDictionary(info))
+        info = parseResponseToDictionary(info)
+        info['clid'] = clid
+        list_of_clients.append(info)
     return list_of_clients
 
 
@@ -85,6 +101,6 @@ def sendCommand(command, params, telnet, expect_response):
     if error['msg'] != 'ok':
         return error
     if expect_response:
-        return response
+        return response.decode('string_escape')
     else:
         return error
